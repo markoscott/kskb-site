@@ -669,8 +669,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if(it.all){ go('home'); const h = $('#hsq'); if(h){ h.value = it.all; h.dispatchEvent(new Event('input')); setTimeout(() => { const r = $('#homeresults'); if(r && !r.hidden) r.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 260); } return; }
       go(it.go_, it.arg == null ? undefined : it.arg); }
     function open(){ if(!ov.hidden) return; ov.hidden = false; requestAnimationFrame(() => ov.classList.add('on')); sel = 0; draw(); }
-    function close(){ ov.classList.remove('on'); setTimeout(() => { if(!ov.classList.contains('on')) ov.hidden = true; }, 160); }
+    function close(){ ov.classList.remove('on'); setTimeout(() => { if(!ov.classList.contains('on')) ov.hidden = true; }, 160); if(!q.value.trim()) $('.site-nav').classList.remove('sopen'); }
     nq.addEventListener('focus', open); nq.addEventListener('click', open);
+    // Phones (5 November 2026): search folds into an icon; tapping it opens the field across the bar, ✕ folds it back.
+    ['focus', 'click', 'input'].forEach(e => nq.addEventListener(e, () => $('.site-nav').classList.add('sopen')));
+    { const x = document.createElement('button'); x.type = 'button'; x.className = 'ns-x'; x.setAttribute('aria-label', 'Close search'); x.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      x.addEventListener('mousedown', ev => ev.preventDefault());
+      x.addEventListener('click', () => { q.value = ''; q.blur(); close(); $('.site-nav').classList.remove('sopen'); });
+      $('#navsearch').appendChild(x); }
     $('#navsearch').addEventListener('submit', ev => { ev.preventDefault(); pick(sel); });
     q.addEventListener('input', () => { sel = 0; open(); draw(); });
     document.addEventListener('mousedown', ev => { if(!ov.hidden && !ev.target.closest('#navsearch')) close(); });

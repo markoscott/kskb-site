@@ -1175,3 +1175,25 @@ html.sx-lock{overflow:hidden}
 .lens-swap .startlist>li:nth-child(2){animation-delay:90ms}.lens-swap .startlist>li:nth-child(3){animation-delay:180ms}.lens-swap .startlist>li:nth-child(4){animation-delay:270ms}
 /* Roomier top bar (4 November 2026) */
 .site-nav .in{padding-top:14px;padding-bottom:14px;min-height:68px}
+
+/* Phone top bar (5 November 2026): logo, then a search icon, Collections and the theme toggle on one row. Tapping the icon opens the search across the bar. */
+.ns-x{display:none}
+@media (max-width:760px){
+  .site-nav .in{flex-wrap:nowrap;position:relative;gap:8px}
+  .site-nav .brand{flex:none}
+  .site-nav .nav-search{order:0;flex:0 0 36px;width:36px;min-width:0;margin:0 0 0 auto;transition:none}
+  .site-nav .nav-search input{width:36px;height:36px;padding:0;color:transparent;caret-color:transparent;cursor:pointer}
+  .site-nav .nav-search input::placeholder{color:transparent}
+  .site-nav .nav-search .ns-ic{left:10px;color:var(--ink)}
+  .site-nav .nav-search .ns-kbd{display:none}
+  .site-nav .navbtn{flex:none}
+  .site-nav.sopen .nav-search{position:absolute;left:clamp(24px,6vw,80px);right:clamp(24px,6vw,80px);top:0;bottom:0;height:36px;margin:auto 0;width:auto;z-index:5}
+  .site-nav.sopen .sx{position:fixed;top:calc(env(safe-area-inset-top,0px) + 76px);left:12px;right:12px;width:auto;margin:0}
+  .site-nav.sopen .sx-panel{height:auto;max-height:calc(100vh - 100px);border-radius:20px}
+  .site-nav.sopen .nav-search input{width:100%;padding:0 44px 0 38px;color:var(--ink);caret-color:auto;cursor:text}
+  .site-nav.sopen .nav-search input::placeholder{color:var(--faint)}
+  .site-nav.sopen .nav-search .ns-ic{color:var(--faint)}
+  .site-nav.sopen .ns-x{display:grid;place-items:center;position:absolute;right:4px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:0;border-radius:50%;background:var(--bts,#F1F1F3);color:var(--ink);cursor:pointer;z-index:2}
+  .site-nav.sopen .brand,.site-nav.sopen .navbtn,.site-nav.sopen .links{visibility:hidden}
+}
+@media (max-width:360px){.site-nav .in{gap:6px}.site-nav .navbtn{padding:6px 10px}}
