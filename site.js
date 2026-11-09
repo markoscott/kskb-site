@@ -142,6 +142,93 @@ function coverize(el){
   while(nx && nx.classList.contains('lede') && !nx.classList.contains('lede-out')){ const after = nx.nextElementSibling; tx.appendChild(nx); nx = after; }
   cv.appendChild(tx);
 }
+// Friendlier titles for Start here (display only; the card data is unchanged).
+function friendly(n){ let t = String(n || '').trim(), m;
+  if((m = t.match(/^[\w.-]+\/[\w.-]+\s*\((.+)\)$/))) t = m[1];
+  else if((m = t.match(/^(?:reading path[^:]*|[^:]*(?:meetup|meeting|call|session|webinar)[^:]*):\s+(.+)$/i))) t = m[1];
+  else if((m = t.match(/^(.{6,}?)\s*\((.+)\)$/))) t = m[1];
+  t = t.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (_, y, mo, d) => `${+d} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo - 1]} ${y}`).replace(/\s+/g, ' ').trim();
+  const w0 = t.split(' ')[0]; return /[:/]|^.[^ ]*[A-Z]/.test(w0) ? t : t.charAt(0).toUpperCase() + t.slice(1); }
+// An hour, a day, a week (Janet, 8 November 2026): the role's reading path, split into its timed sections.
+const capF = t => t.charAt(0).toUpperCase() + t.slice(1);
+function pathSecs(pth){ const n = byPath[pth]; if(!n || !n.h) return []; const d = document.createElement('div'); d.innerHTML = n.h;
+  return [...d.querySelectorAll('h2')].map((h, i) => { const tx = h.textContent.trim(); const m = tx.match(/\(([^)]*\b(?:hour|day|week|month)s?\b[^)]*)\)/i); const whole = /^(?:an?|one|two|a few)\b[^,]*\b(?:hour|day|week|month)s?\b/i.test(tx);
+    if(!m && !whole) return null; const items = []; let el = h.nextElementSibling; while(el && el.tagName !== 'H2'){ if(el.matches('ol,ul')) items.push(...el.querySelectorAll(':scope > li')); el = el.nextElementSibling; }
+    return {i, when: capF(m ? m[1] : tx), title: m ? tx.replace(m[0], '').trim() : '', stops: items.map(li => (li.querySelector('strong') || li).textContent.replace(/\s*\[[^\]]*\]/g, '').split(/[.:;(]/)[0].trim()).filter(Boolean)}; }).filter(Boolean); }
+// Reading path as tabs of stop cards (Janet, 8 November 2026). Same note, same order; only the presentation changes.
+const RP_EXTRA = /inside the implementation|staying current|avoid|skip/i;
+const rpExplain = x => { const w = (x.when || '').toLowerCase();
+  if(/hour/.test(w)) return 'About an hour, no setup needed. Read these in order to get the big picture first.';
+  if(/day/.test(w)) return 'A day or two, hands on. Work through these in order; each one builds on the last.';
+  if(/week/.test(w)) return 'About a week. These take you from the basics toward how it runs in production.';
+  if(/month/.test(w)) return 'Over a month or so. Come back to these as you go deeper.';
+  return 'When you are ready to go further. Read these in order.'; };
+// Sections like "Staying current" and "What to avoid" belong on the role page, not in the step-by-step tabs.
+// Top panels as short bullets: each named item links to its card; a register id on its own becomes a link named after the card.
+const DT = {
+  hour: '<path class="dt-a" d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"/><path class="dt-b" d="M12 7v5l3 2M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"/>',
+  day: '<circle class="dt-a" cx="12" cy="12" r="5"/><path class="dt-b" d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/><circle class="dt-b" cx="12" cy="12" r="5"/>',
+  week: '<rect class="dt-a" x="3" y="5" width="18" height="16" rx="3"/><path class="dt-b" d="M8 3v4M16 3v4M3 10h18M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/><path class="dt-b" d="M8 14h2M14 14h2M8 17h2"/>',
+  month: '<rect class="dt-a" x="3" y="5" width="18" height="16" rx="3"/><path class="dt-b" d="M8 3v4M16 3v4M3 10h18M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/>',
+  inside: '<circle class="dt-a" cx="12" cy="12" r="4"/><path class="dt-b" d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle class="dt-b" cx="12" cy="12" r="4"/>',
+  current: '<path class="dt-a" d="M4 4a16 16 0 0 1 16 16H4z"/><path class="dt-b" d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle class="dt-b" cx="5" cy="19" r="1.2"/>',
+  avoid: '<path class="dt-a" d="M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path class="dt-b" d="M12 9v4M12 17h.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  details: '<rect class="dt-a" x="4" y="3" width="16" height="18" rx="3"/><path class="dt-b" d="M7 3h10a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM8 8h8M8 12h8M8 16h5"/>',
+  code: '<rect class="dt-a" x="2.5" y="4" width="19" height="16" rx="3"/><path class="dt-b" d="M9 9l-3 3 3 3M15 9l3 3-3 3M13 8l-2 8"/>',
+  path: '<path class="dt-a" d="M5 19c4 0 4-6 7-6s3 6 7 6"/><path class="dt-b" d="M5 19c4 0 4-6 7-6s3-8 7-8"/><circle class="dt-b" cx="5" cy="19" r="2"/><circle class="dt-b" cx="19" cy="5" r="2"/>'};
+const dti = (k, cls) => `<svg class="dt ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${DT[k] || DT.path}</svg>`;
+const dtKey = t => { t = (t || '').toLowerCase(); return /hour/.test(t) ? 'hour' : /week/.test(t) ? 'week' : /month/.test(t) ? 'month' : /day/.test(t) ? 'day' : /inside|implement/.test(t) ? 'code' : /current/.test(t) ? 'current' : /avoid|skip/.test(t) ? 'avoid' : 'path'; };
+const RP_SUM = {'inside the implementation': 'Under the hood: how KERIpy is set up, where its docs and code live, and what each project depends on.'};
+function rpBullets(label, html){
+  const nm = id => { const t = (byId[id].n || id).replace(/\s*\(.*$/, '').trim(); return t.length > 42 ? t.slice(0, 40).trim() + '…' : t; };
+  let h = html.replace(/<strong>(.*?)<\/strong>\s*\[([a-z0-9][a-z0-9.-]*)\]/g, (m, t, id) => byId[id] ? `<a href="#item/${esc(id)}"><strong>${t}</strong></a>` : m)
+    .replace(/\[([a-z0-9][a-z0-9.-]*)\]/g, (m, id) => byId[id] ? `<a href="#item/${esc(id)}">${esc(nm(id))}</a>` : m);
+  const d = document.createElement('div'); d.innerHTML = h;
+  const src = d.querySelectorAll('li').length ? [...d.querySelectorAll('li')] : [...d.querySelectorAll('p')];
+  const items = src.flatMap(x => x.innerHTML.split(/;\s*/)).map(x => x.trim().replace(/\.$/, '')).filter(Boolean).map(x => x.replace(/^((?:<[^>]+>)*)([a-z])/, (m, t, c) => t + c.toUpperCase()));
+  const sum = RP_SUM[label.toLowerCase()];
+  return (sum ? `<p class="rp-sum">${esc(sum)}</p>` : '') + (items.length ? `<ul class="rp-bul">${items.map(x => `<li>${x}</li>`).join('')}</ul>` : h); }
+function rpExtras(pth){ const n = byPath[pth]; if(!n || !n.h) return []; const d = document.createElement('div'); d.innerHTML = n.h;
+  return [...d.querySelectorAll('h2')].filter(h => RP_EXTRA.test(h.textContent)).map(h => { const parts = []; let e = h.nextElementSibling; while(e && e.tagName !== 'H2'){ parts.push(e.outerHTML); e = e.nextElementSibling; } const label = h.textContent.trim(); let html = parts.join('');
+    html = rpBullets(label, html);
+    return {label, html}; }); }
+const rpDone = () => { try { return JSON.parse(localStorage.getItem('kskb-done') || '[]'); } catch(e){ return []; } };
+function renderRP(n, el, head){
+  const d = document.createElement('div'); d.innerHTML = n.h; const timed = Object.fromEntries(pathSecs(n.p).map(x => [x.i, x]));
+  const intro = d.querySelector('blockquote'); const h2s = [...d.querySelectorAll('h2')];
+  const secs = h2s.map((h, i) => { const body = []; let e = h.nextElementSibling; while(e && e.tagName !== 'H2'){ body.push(e); e = e.nextElementSibling; }
+    const lis = body.filter(x => x.matches('ol,ul')).flatMap(x => [...x.querySelectorAll(':scope > li')]);
+    const paras = body.filter(x => !x.matches('ol,ul')).map(x => x.outerHTML).join('');
+    const stops = lis.map(li => { const raw = li.innerHTML; const ids = [...raw.matchAll(/\[([a-z0-9][a-z0-9.-]*)\]/g)].map(m => m[1]).filter(id => byId[id]);
+      const st = li.querySelector('strong'); const txt = li.textContent.replace(/\s*\[[^\]]*\]/g, '').replace(/\s+/g, ' ').trim();
+      let title = st ? st.textContent.replace(/\s*\[[^\]]*\]/g, '').trim() : txt.split(/[;:]|, (?:then|and) /)[0].trim();
+      let desc = txt.startsWith(title) ? txt.slice(title.length) : txt; desc = desc.replace(/^[\s,:;.\-–—]+/, '').trim();
+      if(title.length > 90){ desc = ''; title = title.slice(0, 88).trim() + '…'; }
+      return {title, desc: desc ? capF(desc) : '', ids}; });
+    const t = timed[i]; return {i, label: t ? t.when : h.textContent.trim(), sub: t ? t.title : '', when: t ? t.when : '', timed: !!t, stops, paras}; }).filter(x => !RP_EXTRA.test(x.label));
+  const card = (x, k) => { const c = byId[x.ids[0]]; const more = x.ids.slice(1).filter(id => byId[id]);
+    const key = n.p + '#' + x.title; return `<article class="rp-stop${c ? ' clk' : ''}${rpDone().includes(key) ? ' done' : ''}"${c ? ` data-go="item:${esc(c.id)}"` : ''}><button type="button" class="rp-check" data-done="${esc(key)}" aria-pressed="${rpDone().includes(key)}" aria-label="Mark step ${k + 1} as done"></button><div class="rp-stop-main"><div class="rp-stop-top"><span class="rp-num">${k + 1}</span>${c ? `<span class="card-chip ${chipCls(c.t)}">${esc(shortType(c.t))}</span>${c.l ? `<span class="rp-lv">${esc(LEVEL[c.l] || '')}</span>` : ''}` : ''}</div>
+      <h3>${esc(x.title)}</h3>${x.desc ? `<p>${esc(x.desc)}</p>` : ''}
+      <div class="rp-acts">${c ? `<a class="rp-open" href="#item/${esc(c.id)}">Open card</a>${c.u ? `<a class="rp-orig" href="${esc(c.u)}" target="_blank" rel="noopener">Original ↗</a>` : ''}` : ''}${more.length ? `<span class="rp-more">+ ${more.map(id => `<a href="#item/${esc(id)}" title="${esc(byId[id].n)}">${esc(shortType(byId[id].t))}</a>`).join(', ')}</span>` : ''}</div></div></article>`; };
+  const panel = (x) => `<div class="rp-panel" role="tabpanel" data-sec="${x.i}" hidden><div class="rp-head">${dti(dtKey(x.label), "dt-lg")}<div><h2 class="rp-h">${esc(x.label)}</h2><p class="rp-exp">${esc(rpExplain(x))}</p></div></div>${x.stops.length ? `<div class="rp-grid">${x.stops.map(card).join('')}</div>` : ''}${x.paras ? `<div class="rp-note prose">${linkRefs(x.paras)}</div>` : ''}</div>`;
+  const ex = rpExtras(n.p);
+  el.innerHTML = head.replace(`<h1>${esc(n.t)}</h1>`, `<h1>${esc(n.t.split(':')[0])}</h1>`) + `${intro ? `<p class="lede rp-intro">${esc(intro.textContent.trim())}</p>` : ''}
+    <div class="rp-tabs" role="tablist">${ex.length ? `<button type="button" class="rp-tab" role="tab" data-sec="details">${dti('details', 'dt-tab')}<b>Details</b></button>` : ''}${secs.map(x => `<button type="button" class="rp-tab${x.timed ? ' timed' : ''}" role="tab" data-sec="${x.i}">${dti(dtKey(x.label), "dt-tab")}<b>${esc(x.label)}</b>${x.sub ? `<span>${esc(x.sub)}</span>` : x.stops.length ? `<span>${x.stops.length} ${x.stops.length === 1 ? 'stop' : 'stops'}</span>` : ''}</button>`).join('')}</div>
+    ${secs.map(panel).join('')}${ex.length ? `<div class="rp-panel rp-details" role="tabpanel" data-sec="details" hidden><div class="rp-head">${dti('details', 'dt-lg')}<div><h2 class="rp-h">Details</h2><p class="rp-exp">Background for when you go further: how it is built, how to keep up, and the mistakes to skip.</p></div></div><div class="rp-dgrid">${ex.map(x => `<section class="rp-dsec"><h3>${dti(dtKey(x.label), 'dt-sm')}${esc(x.label)}</h3><div class="prose">${x.html}</div></section>`).join('')}</div></div>` : ''}${strip('note', 'the notes table; a reading path shown as tabs, one per section, each stop linked to its card and the original')}`;
+  const sel = i => { $$('#p-detail .rp-tab').forEach(b => { const on = b.dataset.sec === String(i); b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    $$('#p-detail .rp-panel').forEach(pn => { pn.hidden = pn.dataset.sec !== String(i); }); try { sessionStorage.setItem('kskb-sec', String(i)); } catch(e){}
+    document.dispatchEvent(new CustomEvent('rp-tab', {detail: i})); };
+  const count = () => $$('#p-detail .rp-panel').forEach(pn => { const all = pn.querySelectorAll('.rp-stop').length, dn = pn.querySelectorAll('.rp-stop.done').length, c = pn.querySelector('.rp-count'); if(c) c.textContent = `${dn} of ${all} done`; });
+  count();
+  el.rpSelect = sel;
+  $$('#p-detail .rp-check').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); const k = b.dataset.done; let d = rpDone(); d = d.includes(k) ? d.filter(x => x !== k) : d.concat(k); try { localStorage.setItem('kskb-done', JSON.stringify(d)); } catch(e){} const on = d.includes(k); b.setAttribute('aria-pressed', on); b.closest('.rp-stop').classList.toggle('done', on); count(); }));
+  $$('#p-detail .rp-tab').forEach(b => b.addEventListener('click', () => sel(b.dataset.sec)));
+  let start = secs[0].i; try { const v = sessionStorage.getItem('kskb-sec'); if(v !== null && secs.some(x => String(x.i) === v)) start = +v; } catch(e){}
+  sel(start);
+}
+const hdwCards = secNote => `<div class="spath carousel hdw">${pathSecs(secNote).map((x, k) => `<a class="spath-step hdw-card${k === 0 ? ' first' : ''}" href="#note/${esc(secNote)}" data-note="${esc(secNote)}" data-sec="${x.i}"><span class="spath-tags"><span class="card-chip ${k === 0 ? 'cc-green' : 'cc-slate'}">${k === 0 ? 'Start here' : 'Then'}</span></span>${dti(dtKey(x.when), "dt-card")}<b class="hdw-when">${esc(x.when)}</b><ul class="hdw-stops">${x.stops.slice(0, 3).map(t => `<li>${esc(t.length > 60 ? t.slice(0, 58).trim() + '…' : t)}</li>`).join('')}</ul><span class="hdw-n">${x.stops.length} ${x.stops.length === 1 ? 'stop' : 'stops'}</span></a>`).join('')}</div>`;
+function saveSecPath(a){ const pth = a.dataset.note; const secs = pathSecs(pth);
+  try { sessionStorage.setItem('kskb-path', JSON.stringify({label: ($('#starthere h2') || {}).textContent || 'Reading path', note: pth, secs: secs.map(x => ({i: x.i, when: x.when}))})); sessionStorage.setItem('kskb-sec', a.dataset.sec); } catch(e){} }
 function go(id, arg){
   if(id.includes(':') && arg === undefined){ [id, arg] = [id.split(':')[0], id.split(':').slice(1).join(':')]; }
   if(id === 'lens'){ who = Object.assign({}, who, {role: arg && arg !== 'none' ? arg : null}); remember(who.role ? 'lens' : 'home', who.role || undefined); $$('.page').forEach(p => p.classList.toggle('on', p.id === 'p-home')); $$('.links button').forEach(b => b.classList.toggle('active', b.dataset.go === 'home')); renderHome(); wire(); return; }
@@ -242,22 +329,22 @@ function renderTopics(){
 function renderRole(id){
   const r = roleOf(id); const el = $('#p-detail'); if(!r){ el.innerHTML = crumbs('Roles') + '<h1>No such role</h1>'; return; }
   const rows = D.cards.filter(c => c.ro.includes(r.id)); const byT = {}; rows.forEach(c => (byT[c.t] = byT[c.t] || []).push(c));
-  const st = startOf(r); const four = firstFour(rows, 4, st.cards);
+  const st = startOf(r);
   el.innerHTML = crumbs('<button class="link" data-go="roles">Start as…</button>', esc(r.label)) + `<div class="role-hero"><span class="card-chip cc-green">Role</span><h1>${esc(r.label)}</h1><p class="lede">${esc(r.does)}</p><div class="role-stats"><span><b>${fmt(rows.length)}</b> cards for you</span><span><b>${Object.keys(byT).length}</b> kinds of material</span></div></div>
-  ${st.notes.length ? `<section class="role-sec role-read"><h2>Read first</h2><p class="note">The notes written for this role, in the order to read them; a reading path links every stop to its card and to the original.</p><div class="startbox"><ol class="startlist">${st.notes.map(p => `<li><a href="#note/${esc(p)}">${esc(byPath[p].t)}</a></li>`).join('')}</ol></div></section>` : ''}
-  ${four.length ? `<section class="role-sec"><h2>Start here</h2><p class="note">The quickest way in, in plain terms.</p><div class="startbox"><ol class="startlist">${four.map(c => `<li><a href="#item/${esc(c.id)}">${esc(c.n)}</a> <span class="startlist-d">${esc(c.a || plainSum(c))}</span></li>`).join('')}</ol></div></section>` : ''}
-  <div class="grid2"><div class="panel"><h3>Questions this answers</h3><ul class="qlist">${r.questions.map(q => `<li>${esc(q)}</li>`).join('') || '<li class="note">None written yet.</li>'}</ul></div>
-  <div class="panel"><h3>Read as this role</h3><p>${who.role === r.id ? `You are reading as ${esc(r.label.toLowerCase())}: the home page opens on this lens, and the address of that view is #lens/${esc(r.id)}.` : `The home page arranged for ${esc(r.label.toLowerCase())}: the start list, the latest cards and the events in this lens.`}</p>${who.role === r.id ? '' : `<p style="margin:18px 0 0"><button class="kx-btn kx-next" type="button" id="takeRole">View the site as ${esc(r.label.toLowerCase())} →</button></p>`}</div></div>
-  ${Object.entries(byT).sort((a, b) => b[1].length - a[1].length).map(([k, v]) => `<h2>${esc(shortType(k))} <span class="h-ct">${fmt(v.length)}</span></h2>${cardRows(v.slice(0, 40))}${v.length > 40 ? '<p class="note">Showing the first 40 by date.</p>' : ''}`).join('')}${strip('role', 'the resource_roles join table')}`;
+  ${st.notes.length ? `${(() => { const sn = st.notes.find(pth => pathSecs(pth).length >= 2); const rest = st.notes.filter(pth => pth !== sn); return `<section class="role-sec role-read" id="starthere"><div class="sec-head"><h2>Start here for <span class="serif-it">${esc(r.label.toLowerCase())}</span></h2>${sn ? '<div class="sec-act"><button class="car-btn" type="button" data-car="-1" aria-label="Scroll back">←</button><button class="car-btn" type="button" data-car="1" aria-label="Scroll forward">→</button></div>' : ''}</div>${sn ? `<p class="note">Jump in by how much time you have. Each card opens that part of the reading path.</p>${hdwCards(sn)}` : ''}${rest.length ? `${sn ? '<p class="note" style="margin-top:14px">Also written for this role:</p>' : '<p class="note">The notes written for this role, in the order to read them.</p>'}<div class="startbox"><ol class="startlist">${rest.map(p => `<li><a href="#note/${esc(p)}">${esc(byPath[p].t)}</a></li>`).join('')}</ol></div>` : ''}</section>`; })()}` : ''}
+  <section class="role-sec rs-find"><h2>Everything for ${esc(r.label.toLowerCase())} <span class="h-ct">${fmt(rows.length)}</span></h2><div class="rs-bar"><input class="search" id="rsq" type="search" placeholder="Search ${fmt(rows.length)} cards for ${esc(r.label.toLowerCase())}" aria-label="Search the cards for this role"><div class="facets"><select id="rst" aria-label="Type"><option value="">All types</option>${Object.entries(byT).sort((a, b) => b[1].length - a[1].length).map(([k, v]) => `<option value="${esc(k)}">${esc(TYPE[k] || k)} (${fmt(v.length)})</option>`).join('')}</select><select id="rsp" aria-label="Topic"><option value="">All topics</option>${[...new Set(rows.flatMap(c => c.tp))].filter(t => TOPIC[t]).sort((a, b) => TOPIC[a].localeCompare(TOPIC[b])).map(t => `<option value="${esc(t)}">${esc(TOPIC[t])}</option>`).join('')}</select><select id="rsl" aria-label="Level"><option value="">All levels</option>${D.vocab.levels.filter(l => rows.some(c => c.l === l.id)).map(l => `<option value="${esc(l.id)}">${esc(LEVEL[l.id])}</option>`).join('')}</select></div></div><div id="rsout">${cardRows(rows.slice().sort((a, b) => (b.d || '').localeCompare(a.d || '')))}</div><p class="note" id="rsn" hidden></p></section>${strip('role', 'the resource_roles join table')}`;
+  $$('#p-detail .hdw-card').forEach(a => a.addEventListener('click', () => saveSecPath(a)));
+  { const q = $('#rsq'), note = $('#rsn'), ft = $('#rst'), fp = $('#rsp'), fl = $('#rsl'); const trs = $$('#rsout tbody tr'); const run = () => { const v = q.value.trim(); let n = 0; trs.forEach(tr => { const c = byId[(tr.dataset.go || '').replace('item:', '')] || {}; const ok = (!ft.value || c.t === ft.value) && (!fp.value || (c.tp || []).includes(fp.value)) && (!fl.value || c.l === fl.value) && (!v || matchScore(cardText(c), v) >= 1); tr.hidden = !ok; if(ok) n++; }); const on = v || ft.value || fp.value || fl.value; note.hidden = !on; note.textContent = n ? `${fmt(n)} ${n === 1 ? 'card' : 'cards'}` : 'Nothing matches. Try fewer words or clear a filter.'; }; if(q){ q.addEventListener('input', run); [ft, fp, fl].forEach(x => x.addEventListener('change', run)); } }
   const tr = $('#takeRole'); if(tr) tr.addEventListener('click', () => { if(PERSONAS.find(p => p.id === r.id)) setWho(r.id); else { who = {...PERSONAS[2], id: r.id, role: r.id, label: r.label}; renderNav(); go('home'); } });
 }
 // Register ids in a note's text, "[hitchhikers-guide]", become links to the card and to the original (5 November 2026, from the review).
 const linkRefs = h => String(h || '').replace(/\[([a-z0-9][a-z0-9.-]*)\]/g, (m, id) => byId[id] ? `<span class="cref"><a href="#item/${esc(id)}">card</a>${byId[id].u ? ` · <a href="${esc(byId[id].u)}" target="_blank" rel="noopener">original ↗</a>` : ''}</span>` : m);
 function renderNote(path){
   const n = byPath[path]; const el = $('#p-detail'); if(!n){ el.innerHTML = crumbs('Notes') + `<h1>No such note</h1><p class="note">Nothing in this copy at <code>${esc(path)}</code>.</p>`; return; }
-  const head = crumbs('<button class="link" data-go="notes">Notes</button>', esc(n.p.split('/')[0])) + `<h1>${esc(n.t)}</h1><p class="note"><span class="chip">${esc(n.c)}</span> ${esc(n.k || 'note')} · ${fmt(n.w)} words${n.s ? ' · ' + esc(n.s) : ''}</p>`;
+  const head = crumbs('<button class="link" data-go="notes">Notes</button>', esc(n.p.split('/')[0])) + `<h1>${esc(n.t)}</h1>`;
   if(!canRead(n)){ el.innerHTML = head + `<div class="panel"><h3>Shared with the reviewers</h3><p>This note is marked <b>partner</b>: it travels to the core group's copy and is not on the public site. Sign in as a reviewer to read it here, or wait for the publication decision, which may mark it public.</p><p><button class="link" id="asRev">View as a reviewer</button> · <button class="link" data-go="access">What each tier sees</button></p></div>${strip('note')}`; const b = $('#asRev'); if(b) b.addEventListener('click', () => { setWho('reviewer'); go('note', path); }); return; }
   if(!n.h){ el.innerHTML = head + `<p class="note">A generated index; its content is this site's own views: <button class="link" data-go="topics">Topics</button>, <button class="link" data-go="cards">Every card</button>, <button class="link" data-go="timeline">Timeline</button>.</p>${strip('note')}`; return; }
+  if(pathSecs(n.p).length >= 2){ renderRP(n, el, head); return; }
   el.innerHTML = head + `<div class="prose note-body">${linkRefs(n.h)}</div>${strip('note', 'the notes table; the body rendered from Markdown at build time, wikilinks resolved to the notes in this copy')}`;
 }
 function renderMeetings(){
@@ -421,6 +508,13 @@ function openColl(){
 }
 function closeColl(){ const ov = $('#collov'); if(ov){ ov.classList.remove('on'); ov.setAttribute('aria-hidden', 'true'); } }
 let heroIntroPlayed = false, rolesHidden = false;
+// Role + familiarity (Janet, 8 November 2026): "newcomer" is a level, not a role. Readers pick who they are, then how well they know KERI; familiarity reorders every list by reading level.
+const FAM = [['new', 'New to KERI', ['intro', 'practitioner']], ['basics', 'I know the basics', ['practitioner', 'implementer']], ['deep', 'Deep in it', ['implementer', 'normative']]];
+let fam = (() => { try { return localStorage.getItem('kskb-fam') || 'new'; } catch(e){ return 'new'; } })();
+const famOf = () => FAM.find(f => f[0] === fam) || FAM[0];
+const famRank = c => { const lv = famOf()[2], i = lv.indexOf(c.l); return i < 0 ? 9 : i; };
+const famSort = rows => rows.map((c, i) => [c, i]).sort((a, b) => famRank(a[0]) - famRank(b[0]) || a[1] - b[1]).map(x => x[0]);
+const roleLabel = x => x.id === 'newcomer' ? 'Just curious' : x.label;
 // Browse your way (Janet, 4 November 2026): one set of ways in, shared by the home section and the empty search dropdown.
 function browseWays(){ return [
   ['cards', TYPEIC.dataset || TYPEIC.paper, 'Every card', 'All ' + fmt(D.cards.length) + ' cards, filtered by type, topic and level.'],
@@ -436,12 +530,16 @@ function lensSwap(){ const hs = $('#homesections'); if(!hs) return; hs.classList
 function renderHome(){
   const c = D.counts; const r = who.role ? roleOf(who.role) : null;
   const stN = r ? startOf(r).notes : [];
-  const startFour = r ? firstFour(D.cards.filter(c => c.ro.includes(r.id)), 4, startOf(r).cards) : [];
+  const rolePool = r ? D.cards.filter(c => c.ro.includes(r.id)) : [];
+  const famPool = rolePool.filter(c => famOf()[2].includes(c.l));
+  const startFour = r ? (fam === 'new' ? firstFour(rolePool, 4, startOf(r).cards) : firstFour(famPool.length >= 4 ? famPool : rolePool, 4)) : [];
   const readFirst = stN.length ? `<p class="note" style="margin-top:10px">Read first: ${stN.map(p => `<a href="#note/${esc(p)}">${esc(byPath[p].t)}</a>`).join(' · ')}</p>` : '';
-  const newest = D.cards.filter(x => x.d && !['event', 'meeting', 'meeting-series'].includes(x.t) && (!r || x.ro.includes(r.id)) && !startFour.includes(x)).slice(0, 6);
+  const newest = famSort(D.cards.filter(x => x.d && !['event', 'meeting', 'meeting-series'].includes(x.t) && (!r || x.ro.includes(r.id)) && !startFour.includes(x))).slice(0, 6);
   const forRoles = ['standards-policy', 'communications', 'business-development'];
   const startHd = r ? (forRoles.includes(r.id) ? `Start here for <span class="serif-it">${esc(r.label.toLowerCase())}</span>` : `Start here, as ${'aeiou'.includes((r.label[0] || '').toLowerCase()) ? 'an' : 'a'} <span class="serif-it">${esc(r.label.toLowerCase())}</span>`) : '';
-  const startBlock = r ? `<section class="home-sec" id="starthere"><h2>${startHd}</h2><p class="lede" style="margin-bottom:10px">${esc(r.does)}</p><div class="startbox"><ol class="startlist">${startFour.map(c => `<li><a href="#item/${esc(c.id)}">${esc(c.n)}</a> <span class="startlist-d">${esc(c.a || '')}</span></li>`).join('')}</ol></div>${readFirst}<p class="start-more"><a class="link" href="#role/${esc(r.id)}" data-go="role:${esc(r.id)}">Open the full ${esc(r.label || r.n || r.id)} page →</a></p></section>` : '';
+  const secNote = stN.find(pth => pathSecs(pth).length >= 2);
+  const secCards = secNote ? hdwCards(secNote) : '';
+  const startBlock = r ? `<section class="home-sec" id="starthere"><div class="sec-head"><h2>${startHd}</h2><div class="sec-act"><button class="car-btn" type="button" data-car="-1" aria-label="Scroll back">←</button><button class="car-btn" type="button" data-car="1" aria-label="Scroll forward">→</button></div></div><p class="lede" style="margin-bottom:10px">${esc(r.does)}</p>${secCards ? secCards : `<div class="spath carousel">${[...stN.slice(0, 1).map(pth => ({first: true, href: '#note/' + pth, n: byPath[pth].t, sub: 'The guided reading path for this role. Start here, then follow the steps.', tag: 'Read first'})), ...startFour.map(c => ({href: '#item/' + c.id, n: c.n, sub: plainSum(c), tag: shortType(c.t), cls: chipCls(c.t), lv: LEVEL[c.l] || ''}))].map((x, i) => `<a class="spath-step${x.first ? ' first' : ''}" href="${esc(x.href)}"><span class="spath-num">${i + 1}</span><span class="spath-body"><span class="spath-tags"><span class="card-chip ${x.first ? 'cc-green' : esc(x.cls || '')}">${esc(x.tag)}</span>${x.lv ? `<span class="spath-lv">${esc(x.lv)}</span>` : ''}</span><b title="${esc(x.n)}">${esc(friendly(x.n))}</b><span class="spath-sub">${esc(x.sub || '')}</span></span></a>`).join('')}</div>`}<p class="start-more"><a class="link" href="#role/${esc(r.id)}" data-go="role:${esc(r.id)}">Open the full ${esc(r.label || r.n || r.id)} page →</a></p></section>` : '';
   const n = f => fmt(D.cards.filter(f).length);
   const COLL = collItems();
   const SEARCH_KEYS = ['topics', 'timeline', 'meetings', 'products'];
@@ -460,7 +558,7 @@ function renderHome(){
     </div>
     <div class="hero-side">
       <div class="hero-side-h-row"><h2 class="hero-side-h">→ I'm reading as a…</h2><button class="rolelist-toggle" data-roletoggle type="button">${rolesHidden ? 'Show' : 'Hide'}</button></div>
-      <div class="rolelist">${D.roles.map(x => `<button class="rolerow${r && r.id === x.id ? ' on' : ''}" data-lens="${esc(x.id)}"><span class="rolerow-name"><span class="glyph" aria-hidden="true"></span>${esc(x.label)}${x.id === 'newcomer' ? '<span class="startnow">Start here</span>' : ''}</span><span class="rolerow-n">${fmt(D.cards.filter(y => y.ro.includes(x.id)).length)}</span></button>`).join('')}</div>
+      <div class="rolelist">${D.roles.slice().sort((a, b) => (a.id === 'newcomer') - (b.id === 'newcomer')).map(x => { return `${r && r.id === x.id ? '<div class="rolegroup">' : ''}<button class="rolerow${r && r.id === x.id ? ' on' : ''}" data-lens="${esc(x.id)}"><span class="rolerow-name"><span class="glyph" aria-hidden="true"></span>${esc(roleLabel(x))}</span></button>${r && r.id === x.id ? `<div class="famrow" role="radiogroup" aria-label="How well do you know KERI?"><span class="famrow-h">…and I'm</span>${FAM.map(([id, lab]) => `<button type="button" class="famchip${fam === id ? ' on' : ''}" role="radio" aria-checked="${fam === id}" data-fam="${id}">${esc(lab)}</button>`).join('')}</div></div>` : ''}`; }).join('')}</div>
     </div>
   </section>
   <section class="home-sec" id="homeresults" hidden></section><div id="homesections">${startBlock}<section class="home-sec"><div class="sec-head"><h2>The Latest <span class="serif-it">${r ? (forRoles.includes(r.id) ? 'for ' : 'for a ') + esc((r.label || r.n || r.id).toLowerCase()) : 'on KERI'}</span></h2><div class="sec-act"><button class="link viewall" data-go="cards">View all</button><button class="car-btn" type="button" data-car="-1" aria-label="Scroll back">←</button><button class="car-btn" type="button" data-car="1" aria-label="Scroll forward">→</button></div></div><div class="carousel">${newest.map((x, i) => `${tcard(x, PAL[i % PAL.length], TYPE[x.t] || x.t, LEVEL[x.l] || '')}`).join('')}</div><details class="lvl-help"><summary>What do Introductory, Practitioner, Implementer and Normative mean?</summary><div class="lvl-grid"><div class="lvl"><span class="card-chip cc-green">Introductory</span><p>No background needed. Plain-language explainers and overviews — the place to start.</p></div><div class="lvl"><span class="card-chip cc-blue">Practitioner</span><p>You know the basics and work with the ideas — talks, articles and meetings that go a level deeper.</p></div><div class="lvl"><span class="card-chip cc-purple">Implementer</span><p>You build or run it. Code, tutorials and working notes for developers and operators.</p></div><div class="lvl"><span class="card-chip cc-amber">Normative</span><p>The standards themselves — the specifications that define how the suite must work.</p></div></div></details></section>
@@ -475,6 +573,8 @@ function renderHome(){
   </div>
   <div class="foot-bottom"><span>© 2026 KERISuite Knowledge Base · kskb.dev, in preview</span><span>Code Apache 2.0 · content CC BY 4.0</span><span>With thanks to KERISSE — Kor Dwarshuis &amp; Henk van Cann</span></div></footer>`;
   $$('#p-home [data-lens]').forEach(b => b.addEventListener('click', () => { const cur = who.role; const y = window.scrollY; go('lens', cur === b.dataset.lens ? 'none' : b.dataset.lens); window.scrollTo({top: y, behavior: 'instant'}); lensSwap(); }));
+  $$('#starthere .spath-step').forEach(a => a.addEventListener('click', () => a.dataset.note && saveSecPath(a)));
+  $$('#p-home [data-fam]').forEach(b => b.addEventListener('click', () => { fam = b.dataset.fam; try { localStorage.setItem('kskb-fam', fam); } catch(e){} const y = window.scrollY; renderHome(); wire(); window.scrollTo({top: y, behavior: 'instant'}); lensSwap(); }));
   $$('#p-home [data-roletoggle]').forEach(b => b.addEventListener('click', () => { rolesHidden = !rolesHidden; const g = $('#p-home .hero-grid'); if(g){ g.classList.remove('intro'); g.classList.toggle('roles-off', rolesHidden); } const t = $('#p-home .rolelist-toggle'); if(t) t.textContent = rolesHidden ? 'Show' : 'Hide'; }));
   { const hsq = $('#hsq'); if(hsq){ let tm; hsq.addEventListener('input', () => { clearTimeout(tm); const v = hsq.value; const res = $('#homeresults');
       if(v.trim() && res){ res.hidden = false; const hs = $('#homesections'); if(hs) hs.hidden = true; if(!res.querySelector('.skel')) res.innerHTML = `<div class="skel"><div class="sk sk-h"></div>${'<div class="sk-row"><div class="sk sk-ic"></div><div class="sk-tx"><div class="sk sk-l"></div><div class="sk sk-s"></div></div><div class="sk sk-c"></div></div>'.repeat(5)}</div>`; }
