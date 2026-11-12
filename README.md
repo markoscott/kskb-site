@@ -32,6 +32,11 @@ Two facts about the page as it stands, on purpose and open to change if we test 
   change (standards mode), to be looked at on each page before it goes in.
 - Everything is one file in production: no framework, no bundler, no external script. Keep it that way; it is what
   makes the page portable to any host (see the licenses below).
+- The persona switch (the "Choose a persona" drawer and the Access page) is a demonstration of a possible future
+  sign-in, kept at Mark's word of 11 November 2026 and labeled illustrative wherever it appears. It is a setting of
+  the browser, not authentication: every note in the shared copy is in the page data and the downloadable database,
+  so nothing is hidden from anyone. Sign-in and subscriptions are planned, not running. Keep the label and that
+  wording when you change those pages. The design of the personas is Janet Gonzales's.
 
 ## Working here
 
