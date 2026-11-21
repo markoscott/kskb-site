@@ -487,10 +487,10 @@ function kxRender(){
   body.innerHTML = `<div class="kx-illus kx-g${kxI % 5}"><span class="kx-step">Step ${kxI + 1} of ${KX.length}</span><button class="kx-close" id="kxclose" type="button" aria-label="Close">✕</button>${WALK_SVG[kxI]}</div>
   <h2 class="kx-h">${esc(hw.slice(0, hk).join(' '))} <span class="serif-it">${esc(hw.slice(hk).join(' '))}</span></h2><p class="kx-b">${esc(s.b)}</p>
   <div class="kx-foot"><div class="kx-dots">${KX.map((_, j) => `<button class="kx-dot${j === kxI ? ' on' : ''}${j < kxI ? ' done' : ''}" type="button" data-kxgo="${j}" aria-label="Step ${j + 1}"></button>`).join('')}</div>
-  <div class="kx-nav"><button class="kx-btn" id="kxprev" type="button"${kxI === 0 ? ' disabled' : ''}>Back</button><button class="kx-btn kx-next" id="kxnext" type="button">${last ? 'Start again' : 'Next'}</button></div></div>`;
+  <div class="kx-nav"><button class="kx-btn" id="kxprev" type="button"${kxI === 0 ? ' disabled' : ''}>Back</button><button class="kx-btn kx-next" id="kxnext" type="button">${last ? 'Finish' : 'Next'}</button></div></div>`;
   $('#kxclose').addEventListener('click', closeKx);
   $('#kxprev').addEventListener('click', () => { if(kxI > 0){ kxI--; kxRender(); } });
-  $('#kxnext').addEventListener('click', () => { if(!last){ kxI++; kxRender(); } else { kxI = 0; kxRender(); } });
+  $('#kxnext').addEventListener('click', () => { if(!last){ kxI++; kxRender(); } else { closeKx(); } });
   $$('#kxbody [data-kxgo]').forEach(d => d.addEventListener('click', () => { kxI = +d.dataset.kxgo; kxRender(); }));
 }
 const COLLC = {Source:'cc-blue',Search:'cc-purple',Event:'cc-gold',Learning:'cc-lime',Code:'cc-indigo',Standards:'cc-green',Production:'cc-red',Adoption:'cc-amber',Index:'cc-teal',Governance:'cc-rose'};
@@ -516,7 +516,7 @@ let hsType = 'all', hsSort = 'relevance', hsLevel = 'all';
 function homeSearch(q, keep){
   const res = $('#homeresults'), secs = $('#homesections'); if(!res || !secs) return;
   q = (q || '').trim(); if(!keep){ hsType = 'all'; hsLevel = 'all'; }
-  if(!q){ res.hidden = true; res.innerHTML = ''; secs.hidden = false; return; }
+  if(!q){ const was = !res.hidden; res.hidden = true; res.innerHTML = ''; secs.hidden = false; if(was) window.scrollTo({top: 0, behavior: 'smooth'}); return; }
   const score = c => rankOf(c, q) * 2 + matchScore(c.n + ' ' + c.id, q) * 2 + matchScore(c.a || '', q);
   const all = hitsOf(D.cards, cardText, q);
   const cnt = {}; all.forEach(c => { cnt[c.t] = (cnt[c.t] || 0) + 1; });

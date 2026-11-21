@@ -1515,3 +1515,16 @@ html.sx-lock{overflow:hidden}
 /* Dark mode: chips on solid color fills (Explore by source & setting) use white text */
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .xcard-tags .card-chip{color:#fff}}
 :root[data-theme="dark"] .xcard-tags .card-chip{color:#fff}
+
+/* Explainer illustrations build piece by piece (21 November 2026) */
+.kx-illus .kxs{animation:none}
+.kx-illus .kxs>*{opacity:0;animation:kxIn .55s cubic-bezier(.22,1,.36,1) forwards}
+.kx-illus .kxs>*:nth-child(1){animation-delay:.08s}.kx-illus .kxs>*:nth-child(2){animation-delay:.32s}.kx-illus .kxs>*:nth-child(3){animation-delay:.56s}.kx-illus .kxs>*:nth-child(4){animation-delay:.8s}.kx-illus .kxs>*:nth-child(5){animation-delay:1.04s}.kx-illus .kxs>*:nth-child(n+6){animation-delay:1.28s}
+.kx-illus .kxs>*>.kxt{animation:kxIc .5s cubic-bezier(.34,1.56,.64,1) backwards;animation-delay:inherit}
+.kx-illus .kxbad,.kx-illus .kxok,.kx-illus .kxck,.kx-illus .kxwok,.kx-illus .kxtag{animation:kxBadge .45s cubic-bezier(.34,1.56,.64,1) 1.5s backwards}
+.kx-illus .kxbad{animation:kxBadge .45s cubic-bezier(.34,1.56,.64,1) 1.1s backwards,kxPulse 2.2s ease-in-out 1.8s infinite}
+@keyframes kxIn{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes kxIc{from{transform:scale(.4) rotate(-12deg)}to{transform:none}}
+@keyframes kxBadge{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@keyframes kxPulse{0%,100%{transform:none}50%{transform:scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.kx-illus .kxs>*,.kx-illus .kxs>*>.kxt,.kx-illus .kxbad,.kx-illus .kxok,.kx-illus .kxck,.kx-illus .kxwok,.kx-illus .kxtag{animation:none;opacity:1}}
